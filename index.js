@@ -16,17 +16,100 @@ const canvas = document.getElementById("game-of-life-canvas");
 canvas.height = (CELL_SIZE + 1) * height + 1;
 canvas.width = (CELL_SIZE + 1) * width + 1;
 
-const ctx = canvas.getContext('2d');
+canvas.addEventListener("click", event => {
+  const boundingRect = canvas.getBoundingClientRect();
 
-const renderLoop = () => {
-  universe.tick();
+  const scaleX = canvas.width / boundingRect.width;
+  const scaleY = canvas.height / boundingRect.height;
 
+  const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
+  const canvasTop = (event.clientY - boundingRect.top) * scaleY;
+
+  const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), height - 1);
+  const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), width - 1);
+
+  if (event.shiftKey) {
+    console.log("Here is a shift pressed");
+    universe.insert_glider(row, col);
+  } else if (event.altKey) {
+    console.log("Here is a alt pressed");
+  } else {
+    console.log("normal click");
+    universe.toggle_cell(row, col);
+  }
   drawGrid();
   drawCells();
+});
 
-  requestAnimationFrame(renderLoop);
+const ctx = canvas.getContext('2d');
+
+let animationId = null;
+let tick_count = 0;
+
+const renderLoop = () => {
+  if (tick_count >= 0) {
+      universe.tick();
+
+      drawGrid();
+      drawCells();
+
+      animationId = requestAnimationFrame(renderLoop);
+      tick_count--;
+  } else{
+      pause();
+  }
 };
 
+const isPaused = () => {
+  return animationId === null;
+};
+
+const playPauseButton = document.getElementById("play-pause");
+
+const play = () => {
+  playPauseButton.textContent = "⏸";
+  tick_count = document.getElementById("range-input").value;
+  renderLoop();
+};
+
+const pause = () => {
+  playPauseButton.textContent = "▶";
+  cancelAnimationFrame(animationId);
+  animationId = null;
+};
+
+playPauseButton.addEventListener("click", event => {
+  if (isPaused()) {
+    play();
+  } else {
+    pause();
+  }
+});
+
+const resetButton = document.getElementById("reset");
+const reset_canvas = () => {
+  universe.rand_reset_cell();
+  drawGrid();
+  drawCells();
+};
+resetButton.addEventListener("click", event => {
+  reset_canvas();
+});
+
+const clearButton = document.getElementById("clear");
+const clear_canvas = () => {
+  universe.clear_cell();
+  drawGrid();
+  drawCells();
+};
+clearButton.addEventListener("click", event => {
+  clear_canvas();
+});
+
+const set_buttons_names = () => {
+  clearButton.textContent = "Clear";
+  resetButton.textContent = "Reset";
+}
 const drawGrid = () => {
   ctx.beginPath();
   ctx.strokeStyle = GRID_COLOR;
@@ -76,5 +159,8 @@ const drawCells = () => {
   ctx.stroke();
 };
 
+
+set_buttons_names();
 // activate the rander loop
-requestAnimationFrame(renderLoop);
+//requestAnimationFrame(renderLoop);
+play();
